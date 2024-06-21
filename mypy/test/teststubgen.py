@@ -845,7 +845,6 @@ class StubgencSuite(unittest.TestCase):
         assert_equal(gen.get_imports().splitlines(), ["from typing import ClassVar"])
         assert_equal(output, ["class C:", "    x: ClassVar[int] = ..."])
 
-
     def test_non_c_generate_signature_with_kw_only_args(self) -> None:
         class TestClass:
             def test(self, arg0, *, keyword_only : str, keyword_only_with_default : int = 7):
@@ -869,7 +868,7 @@ class StubgencSuite(unittest.TestCase):
         assert_equal(
             output,
             [
-                "def test(self, arg0, *, keyword_only: str, keyword_only_with_default: int = ...): ..."
+                "def test(self, arg0, *, keyword_only: str, keyword_only_with_default: int = 7): ..."
             ],
         )
 

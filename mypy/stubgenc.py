@@ -304,6 +304,61 @@ class InspectionStubGenerator(BaseStubGenerator):
                 return self.get_type_fullname(argtype)
             return argtype
 
+        def get_str_default_of_node(value: object) -> tuple[str, bool]:
+            from types import NoneType
+            """Get a string representation of the default value of a node.
+
+            Returns a 2-tuple of the default and whether or not it is valid.
+            """
+            if any(isinstance(value, ty) for ty in [bool, int, float, str, bytes, NoneType]):
+                return repr(value), True
+            elif isinstance(value, tuple):
+                items_defaults = []
+                for e in value:
+                    e_default, valid = get_str_default_of_node(e)
+                    if not valid:
+                        break
+                    items_defaults.append(e_default)
+                else:
+                    closing = ",)" if len(items_defaults) == 1 else ")"
+                    default = "(" + ", ".join(items_defaults) + closing
+                    return default, True
+            elif isinstance(value, list):
+                items_defaults = []
+                for e in value:
+                    e_default, valid = get_str_default_of_node(e)
+                    if not valid:
+                        break
+                    items_defaults.append(e_default)
+                else:
+                    default = "[" + ", ".join(items_defaults) + "]"
+                    return default, True
+            elif isinstance(value, set):
+                items_defaults = []
+                for e in value:
+                    e_default, valid = get_str_default_of_node(e)
+                    if not valid:
+                        break
+                    items_defaults.append(e_default)
+                else:
+                    if items_defaults:
+                        default = "{" + ", ".join(items_defaults) + "}"
+                        return default, True
+            elif isinstance(value, dict):
+                items_defaults = []
+                for k, v in value:
+                    if k is None:
+                        break
+                    k_default, k_valid = get_str_default_of_node(k)
+                    v_default, v_valid = get_str_default_of_node(v)
+                    if not (k_valid and v_valid):
+                        break
+                    items_defaults.append(f"{k_default}: {v_default}")
+                else:
+                    default = "{" + ", ".join(items_defaults) + "}"
+                    return default, True
+            return "...", False
+
         arglist: list[ArgSig] = []
 
         # Add the arguments to the signature
@@ -321,8 +376,9 @@ class InspectionStubGenerator(BaseStubGenerator):
                             incomplete = self.add_name("_typeshed.Incomplete")
                             argtype = f"{incomplete} | None"
 
-                    if any(type(default_value) is ty for ty in [bool, str, int, float]):
-                        default_value_str = repr(default_value)
+                    potential_default, valid = get_str_default_of_node(default_value)
+                    if valid and len(potential_default) <= 200:
+                        default_value_str = potential_default
                     else:
                         default_value_str = None
 
